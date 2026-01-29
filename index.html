@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<title>注文履歴</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body{
+    font-family: system-ui, sans-serif;
+    background:#f6f6fb;
+    padding:20px;
+  }
+  .frame{
+    max-width:800px;
+    margin:auto;
+    border:4px solid #7b4dff;
+    border-radius:16px;
+    padding:16px;
+    background:#fff;
+  }
+  h1{
+    text-align:center;
+    color:#7b4dff;
+  }
+  .item{
+    border-bottom:1px solid #ddd;
+    padding:12px 0;
+  }
+  .name{
+    font-weight:bold;
+    font-size:16px;
+  }
+  .sub{
+    font-size:14px;
+    color:#555;
+  }
+  button{
+    margin-top:6px;
+    padding:6px 12px;
+    border:none;
+    border-radius:8px;
+    background:#ff4d4d;
+    color:#fff;
+    cursor:pointer;
+  }
+</style>
+</head>
+
+<body>
+<div class="frame">
+  <h1>注文履歴</h1>
+  <div id="list"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onChildAdded, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAIcXnxMhmjY_90dqRubGk4waqaehpsjhI",
+  authDomain: "ra-men-43fab.firebaseapp.com",
+  databaseURL: "https://ra-men-43fab-default-rtdb.firebaseio.com",
+  projectId: "ra-men-43fab",
+  storageBucket: "ra-men-43fab.firebasestorage.app",
+  messagingSenderId: "451621666181",
+  appId: "1:451621666181:web:21ed43c38173c22dca18ec"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const list = document.getElementById("list");
+
+/* 番号 → 食品名変換表 */
+const dict = {
+  soup:["","鶏ガラ","豚骨","魚介系","野菜","清湯","白湯"],
+  kaeshi:["","塩","醤油","みそ"],
+  noodle:["","極太麺","中太麺","中細麺"],
+  shape:["","ストレート","ちぢれ"],
+  topping:["","ニンニク","背油","野菜","メンマ","わかめ","ねぎ","なると","コーン","チャーシュー","チーズ"]
+};
+
+onChildAdded(ref(db,"orders"), snap => {
+  const key = snap.key;
+  const d = snap.val();
+
+  const nums = String(d.number).split("").map(n=>Number(n));
+
+  const ramen =
+    dict.soup[nums[0]]+" / "+
+    dict.kaeshi[nums[1]]+" / "+
+    dict.noodle[nums[2]]+" / "+
+    dict.shape[nums[3]];
+
+  const tops = nums.slice(4,8)
+    .map(n=>dict.topping[n])
+    .filter(Boolean)
+    .join("・") || "なし";
+
+  const div = document.createElement("div");
+  div.className = "item";
+  div.innerHTML = `
+    <div class="name">${d.name} さん</div>
+    <div>${ramen}</div>
+    <div class="sub">トッピング：${tops}</div>
+    <div class="sub">麺量：${d.men}（${d.gram}g）</div>
+    <button>完了（削除）</button>
+  `;
+
+  div.querySelector("button").onclick = () => {
+    if(confirm("この注文を削除しますか？")){
+      remove(ref(db,"orders/"+key));
+      div.remove();
+    }
+  };
+
+  list.prepend(div);
+});
+</script>
+</body>
+</html>
